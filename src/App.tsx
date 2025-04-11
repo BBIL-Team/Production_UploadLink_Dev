@@ -1,33 +1,103 @@
-import {  useState } from "react";
-import { useAuthenticator } from '@aws-amplify/ui-react';
+import React, { useState } from "react";
+import "./App.css";
+import { useAuthenticator } from "@aws-amplify/ui-react";
 
-function App() {
+const App: React.FC = () => {
   const { user, signOut } = useAuthenticator();
-  const [todos, setTodos] = useState<Array<Schema["Todo"]["type"]>>([]);
+  const [message, setMessage] = useState<string>("");
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  function createTodo() {
-    client.models.Todo.create({ content: window.prompt("Todo content") });
-  }
+  // Replace with your actual API Gateway endpoint
+  const API_ENDPOINT = "https://your-api-id.execute-api.us-east-1.amazonaws.com/prod/send-email";
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setMessage("");
+    setIsLoading(true);
+
+    // Get the user's email from Cognito attributes
+    const email = user?.attributes?.email || user?.signInDetails?.loginId;
+
+    if (!email) {
+      setMessage("Error: No email found for the authenticated user.");
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(API_ENDPOINT, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      setMessage(`Success: ${result.message || "Email sent to Lambda!"}`);
+    } catch (error) {
+      console.error("Error sending email:", error);
+      setMessage(`Error: ${error.message || "Failed to send email."}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
-    <main>
-      <button onClick={signOut}>Sign out</button>
-      <h1>{user?.signInDetails?.loginId}'s todos</h1>
-      <button onClick={createTodo}>+ new</button>
-      <ul>
-        {todos.map((todo) => (
-          <li key={todo.id}>{todo.content}</li>
-        ))}
-      </ul>
-      <div>
-        🥳 App successfully hosted. Try creating a new todo.
-        <br />
-        <a href="https://docs.amplify.aws/react/start/quickstart/#make-frontend-updates">
-          Review next step of this tutorial.
-        </a>
-      </div>
-    </main>
+    <div style={{ padding: "20px", maxWidth: "400px", margin: "0 auto" }}>
+      <h2>Send Email to Lambda</h2>
+      {user ? (
+        <>
+          <p>Logged in as: {user.attributes?.email || user.signInDetails?.loginId}</p>
+          <form onSubmit={handleSubmit}>
+            <button
+              type="submit"
+              disabled={isLoading}
+              style={{
+                marginTop: "10px",
+                padding: "10px 20px",
+                backgroundColor: isLoading ? "#ccc" : "#007bff",
+                color: "white",
+                border: "none",
+                cursor: isLoading ? "not-allowed" : "pointer",
+              }}
+            >
+              {isLoading ? "Sending..." : "Send My Email"}
+            </button>
+          </form>
+          <button
+            onClick={signOut}
+            style={{
+              marginTop: "10px",
+              padding: "10px 20px",
+              backgroundColor: "#dc3545",
+              color: "white",
+              border: "none",
+              cursor: "pointer",
+            }}
+          >
+            Sign Out
+          </button>
+        </>
+      ) : (
+        <p>Please sign in to send your email.</p>
+      )}
+      {message && (
+        <p
+          style={{
+            marginTop: "10px",
+            color: message.startsWith("Error") ? "red" : "green",
+          }}
+        >
+          {message}
+        </p>
+      )}
+    </div>
   );
-}
+};
 
 export default App;
