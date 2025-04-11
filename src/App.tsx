@@ -5,7 +5,7 @@ function App() {
   const { user, signOut } = useAuthenticator();
   const [message, setMessage] = useState('');
 
-  const apiUrl = 'https://your-api-id.execute-api.ap-south-1.amazonaws.com/your-stage/your-lambda-endpoint'; // Replace with your actual URL
+  const apiUrl = 'https://nkxcgcfsj6.execute-api.ap-south-1.amazonaws.com/P2/Production_Uploadlink'; // Replace with your actual URL
 
   const handleSubmit = async () => {
     if (!user?.signInDetails?.loginId) {
