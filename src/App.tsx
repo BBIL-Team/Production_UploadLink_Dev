@@ -142,7 +142,7 @@ const App: React.FC = () => {
               style={{ fontSize: '16px', padding: '10px' }}
               onClick={() => {
                 if (validateFile(file)) {
-                  uploadFile(file, "https://djtdjzbdtj.execute-api.ap-south-1.amazonaws.com/P1/Production_Uploadlink");
+                  uploadFile(file, "https://nkxcgcfsj6.execute-api.ap-south-1.amazonaws.com/P2/Production_Uploadlink");
                 }
               }}
             >
