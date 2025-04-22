@@ -8,8 +8,8 @@ interface TableItem {
 const App: React.FC = () => {
   const [tableName, setTableName] = useState<string>('');
   const [items, setItems] = useState<TableItem[]>([]);
-  const [headers, setHeaders] = useState<str, setError] = ing[]>([]);
-  const [erroruseState<string>('');
+  const [headers, setHeaders] = useState<string[]>([]);
+  const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
 
   // Fetch table data from Lambda via API Gateway
