@@ -1,100 +1,105 @@
-import React, { useState } from 'react';
-import './App.css'; // Optional: For Tailwind or custom styles
+import { useState } from 'react';
 
-interface TableItem {
-  [key: string]: any;
+interface LambdaResponse {
+  statusCode: number;
+  headers: {
+    'Access-Control-Allow-Origin': string;
+    'Access-Control-Allow-Methods': string;
+    'Access-Control-Allow-Headers': string;
+  };
+  body: string;
 }
 
-const TABLE_NAME = 'http-crud-tutorial-items'; // Constant DynamoDB table name
+interface PresignedUrlResponse {
+  presigned_url: string;
+}
+
+interface ErrorResponse {
+  error: string;
+}
 
 const App: React.FC = () => {
-  const [items, setItems] = useState<TableItem[]>([]);
-  const [headers, setHeaders] = useState<string[]>([]);
-  const [error, setError] = useState<string>('');
+  const [fileKey, setFileKey] = useState<string>('April_Sample_File.csv');
   const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string>('');
+  const [success, setSuccess] = useState<string>('');
 
-  // Fetch table data from Lambda via API Gateway
-  const fetchTableData = async () => {
+  const downloadFile = async () => {
     setError('');
-    setItems([]);
-    setHeaders([]);
+    setSuccess('');
+    if (!fileKey.trim()) {
+      setError('Please enter a file key.');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const response = await fetch('YOUR_API_GATEWAY_URL', {
+      // Replace with your API Gateway endpoint
+      const apiUrl = 'https://bj7ahjp01a.execute-api.ap-south-1.amazonaws.com/d1/presigned_urls';
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ table_name: TABLE_NAME }),
+        body: JSON.stringify({
+          body: JSON.stringify({ file_key: fileKey }),
+        }),
       });
 
-      const data = await response.json();
+      const data: LambdaResponse = await response.json();
 
-      if (response.ok && data.items) {
-        if (data.items.length === 0) {
-          setError('No items found in the table');
-        } else {
-          // Set table headers from the first item's keys
-          const itemHeaders = Object.keys(data.items[0]);
-          setHeaders(itemHeaders);
-          setItems(data.items);
-        }
-      } else {
-        setError(data.error || 'Failed to fetch table data');
+      if (response.status !== 200) {
+        const errorData: ErrorResponse = JSON.parse(data.body);
+        throw new Error(errorData.error || 'Failed to get presigned URL');
       }
-    } catch (err) {
-      setError(`Error: ${(err as Error).message}`);
+
+      const { presigned_url }: PresignedUrlResponse = JSON.parse(data.body);
+
+      // Create a temporary anchor element to trigger download
+      const link = document.createElement('a');
+      link.href = presigned_url;
+      link.download = fileKey; // Sets the downloaded file name
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      setSuccess('File download initiated!');
+    } catch (err: any) {
+      setError(`Error: ${err.message}`);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">DynamoDB Table Viewer</h1>
-
-      {/* Submit Button */}
-      <div className="mb-4">
-        <button
-          onClick={fetchTableData}
-          className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600 disabled:bg-gray-400"
-          disabled={loading}
-        >
-          {loading ? 'Loading...' : 'Submit'}
-        </button>
-      </div>
-
-      {/* Error Message */}
-      {error && <p className="text-red-500 mb-4">{error}</p>}
-
-      {/* Data Table */}
-      {items.length > 0 && (
-        <div className="overflow-x-auto">
-          <table className="min-w-full border-collapse border border-gray-300">
-            <thead>
-              <tr className="bg-gray-100">
-                {headers.map((header) => (
-                  <th key={header} className="border border-gray-300 p-2 text-left">
-                    {header}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item, index) => (
-                <tr key={index} className="hover:bg-gray-50">
-                  {headers.map((header) => (
-                    <td key={header} className="border border-gray-300 p-2">
-                      {item[header] !== undefined ? item[header].toString() : ''}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+    <div className="bg-gray-100 flex items-center justify-center min-h-screen">
+      <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+        <h1 className="text-2xl font-bold mb-4 text-center">Download S3 File</h1>
+        <div className="mb-4">
+          <label htmlFor="file_key" className="block text-sm font-medium text-gray-700">
+            File Key (e.g., April_Sample_File.csv)
+          </label>
+          <input
+            type="text"
+            id="file_key"
+            value={fileKey}
+            onChange={(e) => setFileKey(e.target.value)}
+            placeholder="Enter file key"
+            className="mt-1 block w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={loading}
+          />
         </div>
-      )}
+        <button
+          onClick={downloadFile}
+          disabled={loading}
+          className={`w-full p-2 rounded-md text-white ${loading ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'}`}
+        >
+          {loading ? 'Processing...' : 'Download File'}
+        </button>
+        {error && <p className="mt-4 text-red-600">{error}</p>}
+        {success && <p className="mt-4 text-green-600">{success}</p>}
+      </div>
     </div>
   );
 };
