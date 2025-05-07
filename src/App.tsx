@@ -36,7 +36,7 @@ const App: React.FC = () => {
 
     try {
       // Replace with your API Gateway endpoint
-      const apiUrl = 'https://e3blv3dko6.execute-api.ap-south-1.amazonaws.com/default/presigned_urls';
+      const apiUrl = ' https://e3blv3dko6.execute-api.ap-south-1.amazonaws.com/P1/presigned_urls';
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
